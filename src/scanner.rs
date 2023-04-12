@@ -1,5 +1,3 @@
-// src/scanner.rs
-
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::{task, net::TcpStream};
 use crate::config::ScannerConfig;

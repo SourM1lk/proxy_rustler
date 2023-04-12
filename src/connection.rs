@@ -1,5 +1,3 @@
-// src/connection.rs
-
 use std::io;
 use std::net::SocketAddr;
 use tokio::net::TcpStream;

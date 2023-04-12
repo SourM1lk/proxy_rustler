@@ -1,5 +1,3 @@
-// src/report.rs
-
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::net::SocketAddr;

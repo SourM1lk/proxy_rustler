@@ -10,3 +10,5 @@ author = "SourMilk"
 structopt = "*"
 tokio = { version = "1.0", features = ["full"] }
 byteorder = "*"
+colored = "*"
+rand = "*"

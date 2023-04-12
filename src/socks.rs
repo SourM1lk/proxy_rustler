@@ -9,6 +9,7 @@ pub enum SocksVersion {
     V5,
 }
 
+// Display for file save. Will need to modify if I want different formatting
 impl fmt::Display for SocksVersion {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
