@@ -1,10 +1,10 @@
-// src/scanner.rs
-
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::{task, net::TcpStream};
 use crate::config::ScannerConfig;
 use crate::connection::connect_to_proxy;
 use crate::socks::SocksVersion;
+use tokio::time::{timeout, Duration};
+
 
 pub async fn scan_proxies(config: ScannerConfig) {
     let (start_ip, end_ip) = config.ip_range;
@@ -23,7 +23,9 @@ pub async fn scan_proxies(config: ScannerConfig) {
 
             let socks_version = socks_version.clone();
             let task = task::spawn(async move {
-                match TcpStream::connect(proxy_addr).await {
+                // 5 second connect timeout
+                // TODO: Make a flag to set timeout duration
+                match timeout(Duration::from_secs(5), TcpStream::connect(proxy_addr)).await {
                     Ok(_) => {
                         if let Ok(granted) = connect_to_proxy(proxy_addr, target_addr, socks_version).await {
                             if granted {
