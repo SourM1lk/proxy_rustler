@@ -3,10 +3,18 @@ use std::str::FromStr;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
+#[structopt(
+    name = "basic",
+    about = "A basic example with flags, options, and arguments",
+)]
 pub struct CliOptions {
     pub ip_range: String,
     #[structopt(long = "socks", short = "s", default_value = "4")]
     pub socks_version: u8,
+    #[structopt(long = "threads", short = "t", default_value = "10")]
+    pub thread_qty: u8,
+    #[structopt(long, short, name = "output", help = "Output file", default_value = "proxies.txt")]
+    pub output_file: String,
 }
 
 pub struct ScannerConfig {
