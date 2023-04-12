@@ -9,3 +9,4 @@ author = "SourMilk"
 [dependencies]
 structopt = "*"
 tokio = { version = "1.0", features = ["full"] }
+byteorder = "*"
