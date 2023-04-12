@@ -4,8 +4,8 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    name = "basic",
-    about = "A basic example with flags, options, and arguments",
+    name = "Version",
+    about = "A Rust-Based SOCKS Proxy Scanner",
 )]
 pub struct CliOptions {
     pub ip_range: String,
