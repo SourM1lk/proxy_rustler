@@ -25,6 +25,7 @@ pub struct SocksRequest {
     pub port: u16,
 }
 
+#[derive(Debug)]
 pub enum SocksResponse {
     V4(u8),
     V5(u8, u8),
