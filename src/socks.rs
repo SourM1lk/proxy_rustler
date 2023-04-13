@@ -108,3 +108,42 @@ impl SocksResponse {
         }
     }    
 }
+
+/*NOTES:
+SOCKS4 Request Message:
+Byte Stream
+0x04 0x01 0x00 0x50 0xC0 0xA8 0x01 0x64 0x75 0x73 0x65 0x72 0x00
+
+0x04010050C0A801647573657200
+
+0x04 - The SOCKS version number (in this case, 4)
+0x01 - The command code (in this case, 1 for CONNECT)
+0x00 0x50 - The destination port (in this case, 80)
+0xC0 0xA8 0x01 0x64 - The destination IP address (in this case, 192.168.1.100)
+0x75 0x73 0x65 0x72 0x00 - The user ID (in this case, "user" terminated by a null byte)
+
++----+----+----+------+----------+----------+----------+
+| VN | CD | DSTPORT |      DSTIP        | USERID | NULL|
++----+----+----+------+----------+----------+----------+
+| 04 | 01 |   80    |    192.168.1.100  |  user  |   0 |
++----+----+----+------+----------+----------+----------+
+
+SOCKS5 Request Message:
+Byte Stream
+0x05 0x01 0x00 0x01 0xC0 0xA8 0x01 0x64 0x00 0x50
+
+0x0501000101C0A801640050
+
+0x05 - The SOCKS version number (in this case, 5)
+0x01 - The command code (in this case, 1 for CONNECT)
+0x00 - A reserved byte
+0x01 - The address type (in this case, 1 for an IPv4 address)
+0xC0 0xA8 0x01 0x64 - The destination IP address (in this case, 192.168.1.100)
+0x00 0x50 - The destination port (in this case, 80)
+
++----+-----+-------+------+----------+----------+
+|VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
++----+-----+-------+------+----------+----------+
+| 05 | 01  |  00   |  01  |  192.168.1.100 | 80 |
++----+-----+-------+------+----------+----------+
+ */
