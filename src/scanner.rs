@@ -64,7 +64,7 @@ pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
 
                     // Check if the proxy works for the current SOCKS version
                     //TODO: ADD duration timeout flag
-                    match timeout(Duration::from_secs(10), TcpStream::connect(proxy_addr)).await {
+                    match timeout(Duration::from_secs(config.timeout), TcpStream::connect(proxy_addr)).await {
                         Ok(_) => {
                             if let Ok(granted) = connect_to_proxy(proxy_addr, target_addr, socks_version_enum.clone()).await {
                                 if granted {

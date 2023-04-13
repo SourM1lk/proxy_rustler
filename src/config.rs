@@ -16,6 +16,8 @@ pub struct CliOptions {
     pub connection_limit: usize,
     #[structopt(long = "port", short = "p", default_value = "1-65535", use_delimiter = true)]
     pub ports: Vec<Port>,
+    #[structopt(long = "timeout", short = "t", default_value = "5")]
+    pub timeout: u64,
 }
 
 pub struct ScannerConfig {
@@ -23,6 +25,7 @@ pub struct ScannerConfig {
     pub socks_versions: Vec<u8>,
     pub connection_limit: usize,
     pub ports: Vec<Port>,
+    pub timeout: u64,
 }
 
 impl ScannerConfig {
@@ -41,7 +44,8 @@ impl ScannerConfig {
             ip_range,
             socks_versions: options.socks_versions,
             connection_limit: options.connection_limit,
-            ports: options.ports
+            ports: options.ports,
+            timeout: options.timeout
         })
     }
 }
