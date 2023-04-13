@@ -4,7 +4,7 @@ use tokio::time::{timeout, Duration};
 use std::sync::Arc;
 use indicatif::{ProgressBar, ProgressStyle};
 use tokio::sync::Semaphore;
-use crate::config::ScannerConfig;
+use crate::config::{ScannerConfig, Port};
 use crate::connection::connect_to_proxy;
 use crate::socks::SocksVersion;
 use crate::report::report_proxy;
@@ -34,8 +34,13 @@ pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
     // Iterate through IPs in the range
     for ip in ip_range(start_ip, end_ip) {
         // Iterate through all possible ports
-        // TODO: Allow users to pick ports
-        for &port in &config.port_range {
+        for port_config in &config.ports {
+            let ports = match port_config {
+                Port::Single(port) => vec![*port],
+                Port::Range(port_range) => (port_range.start..=port_range.end).collect::<Vec<u16>>(),
+            };
+        // Iterate through the ports
+        for port in ports {
             let proxy_addr = SocketAddr::new(ip, port);
             let target_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 53);
             
@@ -58,7 +63,8 @@ pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
                     };
 
                     // Check if the proxy works for the current SOCKS version
-                    match timeout(Duration::from_secs(5), TcpStream::connect(proxy_addr)).await {
+                    //TODO: ADD duration timeout flag
+                    match timeout(Duration::from_secs(10), TcpStream::connect(proxy_addr)).await {
                         Ok(_) => {
                             if let Ok(granted) = connect_to_proxy(proxy_addr, target_addr, socks_version_enum.clone()).await {
                                 if granted {
@@ -71,7 +77,7 @@ pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
                     }
                 }
                 //DEBUG
-                if proxy_addr.port() == 4145 {
+                if proxy_addr.port() == 4145 || proxy_addr.port() == 8080 {
                     println!("Scanned: {:?}", proxy_addr);
                 }
 
@@ -82,6 +88,7 @@ pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
             tasks.push(task);
         }
     }
+}
 
     // Wait for all tasks to complete and collect valid proxies
     for task in tasks {

@@ -72,39 +72,39 @@ impl SocksRequest {
 }
 
 impl SocksResponse {
-    pub fn from_bytes(version: &SocksVersion, bytes: &[u8]) -> Result<SocksResponse, &'static str> {
+    pub fn from_bytes(version: &SocksVersion, bytes: &[u8]) -> Result<SocksResponse, Box<dyn std::error::Error>> {
         let mut cursor = Cursor::new(bytes);
-
+    
         match version {
             SocksVersion::V4 => {
-                cursor.read_u8().unwrap(); // Read and discard the null byte
-                let status = cursor.read_u8().unwrap();
+                cursor.read_u8()?; // Read and discard the null byte
+                let status = cursor.read_u8()?;
                 Ok(SocksResponse::V4(status))
             }
             SocksVersion::V5 => {
-                cursor.read_u8().unwrap(); // Read and discard the version byte
-                let status = cursor.read_u8().unwrap();
-                let reserved = cursor.read_u8().unwrap();
-                let addr_type = cursor.read_u8().unwrap();
-
+                cursor.read_u8()?; // Read and discard the version byte
+                let status = cursor.read_u8()?;
+                let reserved = cursor.read_u8()?;
+                let addr_type = cursor.read_u8()?;
+    
                 match addr_type {
                     1 => {
-                        let _ip_v4 = cursor.read_u32::<BigEndian>().unwrap();
+                        let _ip_v4 = cursor.read_u32::<BigEndian>()?;
                     }
                     3 => {
-                        let domain_len = cursor.read_u8().unwrap();
+                        let domain_len = cursor.read_u8()?;
                         let mut domain = vec![0; domain_len as usize];
-                        cursor.read_exact(&mut domain).unwrap();
+                        cursor.read_exact(&mut domain)?;
                     }
                     4 => {
-                        let _ip_v6 = cursor.read_u128::<BigEndian>().unwrap();
+                        let _ip_v6 = cursor.read_u128::<BigEndian>()?;
                     }
-                    _ => return Err("Invalid address type in the SOCKS5 response."),
+                    _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid address type in the SOCKS5 response."))),
                 };
-
-                let _port = cursor.read_u16::<BigEndian>().unwrap();
+    
+                let _port = cursor.read_u16::<BigEndian>()?;
                 Ok(SocksResponse::V5(reserved, status))
             }
         }
-    }
+    }    
 }
