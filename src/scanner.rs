@@ -2,71 +2,80 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::{task, net::TcpStream};
 use tokio::time::{timeout, Duration};
 use std::sync::Arc;
+use indicatif::{ProgressBar, ProgressStyle};
+use tokio::sync::Semaphore;
 use crate::config::ScannerConfig;
 use crate::connection::connect_to_proxy;
 use crate::socks::SocksVersion;
 use crate::report::report_proxy;
-use indicatif::{ProgressBar, ProgressStyle};
-use tokio::sync::Semaphore;
-
 
 pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
-    //TODO: make this a command line argument
-    let connection_limit = 1000; 
-    let semaphore = Arc::new(Semaphore::new(connection_limit));
-
+    // Create a semaphore to limit concurrent connections
+    // Different OSs have different limits
+    let semaphore = Arc::new(Semaphore::new(config.connection_limit));
     let (start_ip, end_ip) = config.ip_range;
-    let socks_version = match config.socks_version {
-        4 => SocksVersion::V4,
-        5 => SocksVersion::V5,
-        _ => unreachable!(),
-    };
-
     let mut valid_proxies = Vec::new();
     let mut tasks = Vec::new();
 
+    // Calculate the total number of items IPs * Ports to be scanned
     let total_ips = match (start_ip, end_ip) {
         (IpAddr::V4(start_ipv4), IpAddr::V4(end_ipv4)) => ((u32::from(end_ipv4) - u32::from(start_ipv4) + 1) * 65535) as u64,
         _ => panic!("Both start and end IP addresses must be IPv4"),
     };
 
+    // Initialize a progress bar
     let pb = ProgressBar::new(total_ips);
-
     let progress_style = ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7} ({eta})")
         .expect("Failed to create progress bar template")
         .progress_chars("=>-");
-
     pb.set_style(progress_style);
 
-
-
+    // Iterate through IPs in the range
     for ip in ip_range(start_ip, end_ip) {
-        for port in 1..=65535 {
+        // Iterate through all possible ports
+        // TODO: Allow users to pick ports
+        for &port in &config.port_range {
             let proxy_addr = SocketAddr::new(ip, port);
             let target_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 53);
-
-            let socks_version = socks_version.clone();
+            
+            // Clone SOCKS versions, progress bar, and semaphore
+            let socks_versions = config.socks_versions.clone();
             let pb_clone = pb.clone();
             let semaphore_clone = Arc::clone(&semaphore);
+
+            // Spawn a task to scan the current IP and port
             let task = task::spawn(async move {
+                // Acquire a permit from the semaphore
                 let _permit = semaphore_clone.acquire().await.unwrap();
 
-                match timeout(Duration::from_secs(5), TcpStream::connect(proxy_addr)).await {
-                    Ok(_) => {
-                        if let Ok(granted) = connect_to_proxy(proxy_addr, target_addr, socks_version.clone()).await {
-                            if granted {
-                                report_proxy(proxy_addr, &socks_version);
-                                return Some(proxy_addr);
+                 // Iterate through the selected SOCKS versions
+                for &socks_version in &socks_versions {
+                    let socks_version_enum = match socks_version {
+                        4 => SocksVersion::V4,
+                        5 => SocksVersion::V5,
+                        _ => unreachable!(),
+                    };
+
+                    // Check if the proxy works for the current SOCKS version
+                    match timeout(Duration::from_secs(5), TcpStream::connect(proxy_addr)).await {
+                        Ok(_) => {
+                            if let Ok(granted) = connect_to_proxy(proxy_addr, target_addr, socks_version_enum.clone()).await {
+                                if granted {
+                                    report_proxy(proxy_addr, &socks_version_enum);
+                                    return Some(proxy_addr);
+                                }
                             }
                         }
+                        Err(_) => {}
                     }
-                    Err(_) => {} 
                 }
+                //DEBUG
                 if proxy_addr.port() == 4145 {
                     println!("Scanned: {:?}", proxy_addr);
                 }
 
+                // Update the progress bar
                 pb_clone.inc(1);
                 None
             });
@@ -80,9 +89,8 @@ pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
             valid_proxies.push(proxy);
         }
     }
-
+    // Finish the progress bar
     pb.finish();
-
     valid_proxies
 }
 
