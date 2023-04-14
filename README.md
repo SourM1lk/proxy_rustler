@@ -67,3 +67,6 @@ ARGS:
 
 ## License
 Proxy Rustler is licensed under the MIT license. See [LICENSE](LICENSE) for more information.
+
+## Disclaimer
+This project is for educational purposes only. The author is not responsible for any misuse of this tool.
