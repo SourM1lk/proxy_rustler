@@ -1,6 +1,7 @@
 use std::net::IpAddr;
 use std::str::FromStr;
 use structopt::StructOpt;
+use std::num::ParseIntError;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -9,17 +10,22 @@ use structopt::StructOpt;
 )]
 pub struct CliOptions {
     pub ip_range: String,
-    #[structopt(long = "socks", short = "s", default_value = "4")]
-    pub socks_version: u8,
-    #[structopt(long = "threads", short = "t", default_value = "10")]
-    pub thread_qty: u8,
-    #[structopt(long, short, name = "output", help = "Output file", default_value = "proxies.txt")]
-    pub output_file: String,
+    #[structopt(long = "socks", short = "s", default_value = "4", use_delimiter = true)]
+    pub socks_versions: Vec<u8>,    
+    #[structopt(long = "connection_limit", short = "c", default_value = "1000")]
+    pub connection_limit: usize,
+    #[structopt(long = "port", short = "p", default_value = "1-65535", use_delimiter = true)]
+    pub ports: Vec<Port>,
+    #[structopt(long = "timeout", short = "t", default_value = "5")]
+    pub timeout: u64,
 }
 
 pub struct ScannerConfig {
     pub ip_range: (IpAddr, IpAddr),
-    pub socks_version: u8,
+    pub socks_versions: Vec<u8>,
+    pub connection_limit: usize,
+    pub ports: Vec<Port>,
+    pub timeout: u64,
 }
 
 impl ScannerConfig {
@@ -28,14 +34,63 @@ impl ScannerConfig {
         let ip_range = parse_ip_range(&options.ip_range)?;
 
         // Validate the SOCKS version
-        if options.socks_version != 4 && options.socks_version != 5 {
-            return Err("Invalid SOCKS version. Please specify either 4 or 5.");
+        for &version in &options.socks_versions {
+            if version != 4 && version != 5 {
+                return Err("Invalid SOCKS version. Please specify either 4 or 5.");
+            }
         }
 
         Ok(ScannerConfig {
             ip_range,
-            socks_version: options.socks_version,
+            socks_versions: options.socks_versions,
+            connection_limit: options.connection_limit,
+            ports: options.ports,
+            timeout: options.timeout
         })
+    }
+}
+
+#[derive(Debug)]
+pub enum Port {
+    Single(u16),
+    Range(PortRange),
+}
+
+impl FromStr for Port {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some(idx) = s.find('-') {
+            let start = s[..idx].parse::<u16>()?;
+            let end = s[idx + 1..].parse::<u16>()?;
+
+            Ok(Port::Range(PortRange { start, end }))
+        } else {
+            let value = s.parse::<u16>()?;
+            Ok(Port::Single(value))
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PortRange {
+    pub start: u16,
+    pub end: u16,
+}
+
+impl FromStr for PortRange {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.split('-').map(|part| part.parse::<u16>());
+        let start = parts.next().unwrap()?;
+        let end = match parts.next() {
+            Some(Ok(value)) => value,
+            Some(Err(err)) => return Err(err),
+            None => start,
+        };
+
+        Ok(PortRange { start, end })
     }
 }
 

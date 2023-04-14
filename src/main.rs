@@ -3,14 +3,13 @@ use tokio::runtime;
 use colored::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use crate::config::{CliOptions, ScannerConfig};
 
 mod config;
 mod socks;
 mod connection;
 mod scanner;
 mod report;
-
-use crate::config::{CliOptions, ScannerConfig};
 
 fn main() {
     display_welcome_message();
