@@ -4,7 +4,7 @@ use std::net::SocketAddr;
 use crate::socks::SocksVersion;
 
 pub fn report_proxy(proxy: SocketAddr, socks_version: &SocksVersion) {
-    println!("Proxy found: {:?}", proxy);
+    println!("Proxy found (report function): {:?}", proxy);
 
     let mut file = OpenOptions::new()
         .append(true)

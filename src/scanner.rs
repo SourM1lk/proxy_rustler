@@ -18,15 +18,25 @@ pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
     let mut tasks = Vec::new();
 
     // Calculate the total number of items IPs * Ports to be scanned
+    let total_ports: u64 = config.ports.iter().map(|port_config| {
+        match port_config {
+            Port::Single(_) => 1,
+            Port::Range(port_range) => (port_range.end - port_range.start + 1) as u64,
+        }
+    }).sum();
+    
     let total_ips = match (start_ip, end_ip) {
-        (IpAddr::V4(start_ipv4), IpAddr::V4(end_ipv4)) => ((u32::from(end_ipv4) - u32::from(start_ipv4) + 1) * 65535) as u64,
+        (IpAddr::V4(start_ipv4), IpAddr::V4(end_ipv4)) => {
+            let num_ips = u32::from(end_ipv4) - u32::from(start_ipv4) + 1;
+            (num_ips as u64) * total_ports
+        },
         _ => panic!("Both start and end IP addresses must be IPv4"),
     };
 
     // Initialize a progress bar
     let pb = ProgressBar::new(total_ips);
     let progress_style = ProgressStyle::default_bar()
-        .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7} ({eta})")
+        .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7}")
         .expect("Failed to create progress bar template")
         .progress_chars("=>-");
     pb.set_style(progress_style);
@@ -68,7 +78,9 @@ pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
                         Ok(_) => {
                             if let Ok(granted) = connect_to_proxy(proxy_addr, target_addr, socks_version_enum.clone()).await {
                                 if granted {
+                                    println!("Found valid proxy: {:?}", proxy_addr);
                                     report_proxy(proxy_addr, &socks_version_enum);
+                                    println!("Proxy reported: {:?}", proxy_addr);
                                     return Some(proxy_addr);
                                 }
                             }
@@ -76,11 +88,6 @@ pub async fn scan_proxies(config: ScannerConfig) -> Vec<SocketAddr> {
                         Err(_) => {}
                     }
                 }
-                //DEBUG
-                if proxy_addr.port() == 4145 || proxy_addr.port() == 8080 {
-                    println!("Scanned: {:?}", proxy_addr);
-                }
-
                 // Update the progress bar
                 pb_clone.inc(1);
                 None

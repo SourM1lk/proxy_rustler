@@ -18,7 +18,7 @@ pub async fn connect_to_proxy(proxy_addr: SocketAddr, target_addr: SocketAddr, v
     };
 
     let request_bytes = socks_request.to_bytes();
-    println!("Request bytes: {:?}", request_bytes);
+    println!("Request bytes: {:?} from {}", request_bytes, proxy_addr);
     stream.write_all(&request_bytes).await?;
 
 
